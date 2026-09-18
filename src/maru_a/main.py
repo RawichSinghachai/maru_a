@@ -1,4 +1,5 @@
 import asyncio
+import aiomqtt
 from asyncua import Client
 from datetime import timezone, timedelta
 
@@ -7,7 +8,32 @@ from .mqtt import connect_mqtt, insert_data_mqtt
 from .dataModel import MachineReading
 
 thai_tz = timezone(timedelta(hours=7))
-
+opc_tags = [
+    "Coutinue",
+    "Master_on",
+    "Machine_fault",
+    "LH_ASN",
+    "LH_BN",
+    "LH_FillingPressure",
+    "LH_FillingVolume",
+    "LH_PGNum",
+    "LH_StepNum",
+    "LH_VacuumGun",
+    "LH_VacuumPump",
+    "LH_PumpVacuumCurrent",
+    "RH_ASN",
+    "RH_BN",
+    "RH_FillingPressure",
+    "RH_FillingVolume",
+    "RH_PGNum",
+    "RH_StepNum",
+    "RH_VacuumGun",
+    "RH_VacuumPump",
+    "RH_PumpVacuumCurrent",
+    "PumpDegassingCurrent",
+    "PumpSupplyCurrent",
+    "PumpFillingCurrent",
+]
 
 
 async def read_tags(client: Client, tags):
@@ -33,20 +59,31 @@ async def main():
         return
     await init_table(pool)
 
-    async with Client(url="opc.tcp://<ip>:4840") as client, connect_mqtt() as mqtt_client:
+    async with Client(url="opc.tcp://<ip>:4840") as client:
 
         while True:
-            data = await read_tags(client, opc_tags)
-            # for name, val in result.items():
-            #             print(f"{name}: {val}")
-            await asyncio.gather(
-                    insert_data(pool, data.to_postgres()),
-                    insert_data_mqtt(mqtt_client, data.to_mqtt()),
-                    return_exceptions=True
-                )
-            print("sent")
-            await asyncio.sleep(1)
+            try:
+                async with connect_mqtt() as mqtt_client:
+                    while True:
+                        data = await read_tags(client, opc_tags)
 
+                        db_result, mqtt_result = await asyncio.gather(
+                                insert_data(pool, data.to_postgres()),
+                                insert_data_mqtt(mqtt_client, data.to_mqtt()),
+                                return_exceptions=True
+                            )
+                        if isinstance(mqtt_result, Exception):
+                            raise mqtt_result
+                        if isinstance(db_result, Exception):
+                            print(f"db error: {db_result}")
+
+                        print("sent")
+                        await asyncio.sleep(1)
+
+            except aiomqtt.MqttError as e:
+                print(f"MQTT disconnected: {e}, reconnecting in 5s")
+                await asyncio.sleep(5)
 
     await pool.close()
-asyncio.run(main(),loop_factory=asyncio.SelectorEventLoop)
+
+asyncio.run(main(), loop_factory=asyncio.SelectorEventLoop)

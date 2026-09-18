@@ -3,12 +3,12 @@ import asyncpg
 async def connect_db():
     try:
         return await asyncpg.create_pool(
-            host="localhost",
-            port=5432,
-            user="postgres",
-            password="yourpassword",
-            database="yourdb"
-        )
+        host="localhost",
+        port=5432,
+        user="admin",              # POSTGRES_USER
+        password="adminpassword",  # POSTGRES_PASSWORD
+        database="mydatabase",     # POSTGRES_DB
+)
     except Exception as e:
         print(f"connect_db error: {e}")
         return None
@@ -31,32 +31,37 @@ async def init_table(pool):
                     L6                      TEXT,
                     L7                      TEXT,
 
-                    Coutinue                TEXT
-                    Master_on               TeXT
+                    Coutinue                TEXT,
+                    Master_on               TEXT,
+                    Machine_fault           TEXT,
+
                     -- LH
-                    LH_ASN                  INTEGER
-                    LH_BN                   INTEGER
-                    LH_FillingPressure      INTEGER
-                    LH_FillingVolume        INTEGER
-                    LH_PGNum                INTEGER
-                    LH_StepNum              INTEGER
-                    LH_VacuumGun            INTEGER
-                    LH_VacuumPump           INTEGER
-                    Machine_fault           TEXT
+                    LH_ASN                  INTEGER,
+                    LH_BN                   INTEGER,
+                    LH_FillingPressure      INTEGER,
+                    LH_FillingVolume        INTEGER,
+                    LH_PGNum                INTEGER,
+                    LH_StepNum              INTEGER,
+                    LH_VacuumGun            INTEGER,
+                    LH_VacuumPump           INTEGER,
+                    LH_PumpVacuumCurrent    REAL,
+
                     -- RH
-                    RH_ASN                  INTEGER
-                    RH_BN                   INTEGER
-                    RH_FillingPressure      INTEGER
-                    RH_FillingVolume        INTEGER
-                    RH_PGNum                INTEGER
-                    RH_StepNum              INTEGER
-                    RH_VacuumGun            INTEGER
-                    RH_VacuumPump           INTEGER
-                    RH_PumpVacuumCurrent    REAL
-                    LH_PumpVacuumCurrent    REAL
-                    PumpDegassingCurrent    REAL
-                    PumpSupplyCurrent       REAL
-                    PumpFillingCurrent      REAL
+                    RH_ASN                  INTEGER,
+                    RH_BN                   INTEGER,
+                    RH_FillingPressure      INTEGER,
+                    RH_FillingVolume        INTEGER,
+                    RH_PGNum                INTEGER,
+                    RH_StepNum              INTEGER,
+                    RH_VacuumGun            INTEGER,
+                    RH_VacuumPump           INTEGER,
+                    RH_PumpVacuumCurrent    REAL,
+
+                    -- Shared pumps
+                    PumpDegassingCurrent    REAL,
+                    PumpSupplyCurrent       REAL,
+                    PumpFillingCurrent      REAL,
+
                     -- Timestamp
                     Recorded_at             TIMESTAMPTZ NOT NULL DEFAULT now()
                 )

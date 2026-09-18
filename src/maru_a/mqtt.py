@@ -2,7 +2,7 @@ import json
 import aiomqtt
 
 
-def connect_mqtt(hostname="localhost", port=1883):
+def connect_mqtt(hostname="100.124.242.18", port=1883):
     return aiomqtt.Client(hostname=hostname, port=port)
 
 

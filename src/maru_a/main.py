@@ -1,6 +1,7 @@
 import asyncio
 import aiomqtt
 from asyncua import Client
+from asyncua import ua 
 from datetime import timezone, timedelta
 
 from .db import connect_db, init_table, insert_data
@@ -38,12 +39,18 @@ opc_tags = [
 
 async def read_tags(client: Client, tags):
     nodes = [client.get_node(f"ns=2;s={name}") for name in tags]
-    data_values = await client.read_data_value(nodes)
-    values = data_values.Value.Value
+
+    params = ua.ReadParameters()
+    for node in nodes:
+        rv = ua.ReadValueId()
+        rv.NodeId = node.nodeid
+        rv.AttributeId = ua.AttributeIds.Value
+        params.NodesToRead.append(rv)
+
+    data_values = await client.uaclient.read(params)  # list[ua.DataValue] ลำดับตรงกับ nodes/tags
 
     result = {name: dv.Value.Value for name, dv in zip(tags, data_values)}
-    source_time_thai = data_values.SourceTimestamp.replace(tzinfo=timezone.utc).astimezone(thai_tz)
-    # print("Thai time:", source_time_thai)
+    source_time_thai = data_values[0].SourceTimestamp.replace(tzinfo=timezone.utc).astimezone(thai_tz)
 
     return MachineReading(
         tags=result,
@@ -59,7 +66,7 @@ async def main():
         return
     await init_table(pool)
 
-    async with Client(url="opc.tcp://<ip>:4840") as client:
+    async with Client(url="opc.tcp://127.0.0.1:52250") as client:
 
         while True:
             try:

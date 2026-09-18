@@ -5,9 +5,9 @@ async def connect_db():
         return await asyncpg.create_pool(
         host="localhost",
         port=5432,
-        user="admin",              # POSTGRES_USER
-        password="adminpassword",  # POSTGRES_PASSWORD
-        database="mydatabase",     # POSTGRES_DB
+        user="postgres",              # POSTGRES_USER
+        password="1234@abcd",  # POSTGRES_PASSWORD
+        database="postgres",     # POSTGRES_DB
 )
     except Exception as e:
         print(f"connect_db error: {e}")

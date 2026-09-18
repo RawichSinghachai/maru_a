@@ -2,7 +2,7 @@ import asyncio
 import aiomqtt
 from asyncua import Client
 from asyncua import ua 
-from datetime import timezone, timedelta
+from datetime import datetime, timezone, timedelta
 
 from .db import connect_db, init_table, insert_data
 from .mqtt import connect_mqtt, insert_data_mqtt 
@@ -35,18 +35,6 @@ opc_tags = [
     "PumpSupplyCurrent",
     "PumpFillingCurrent",
 ]
-
-
-import asyncio
-import aiomqtt
-from asyncua import Client
-from datetime import datetime, timezone, timedelta
-
-from .db import connect_db, init_table, insert_data
-from .mqtt import connect_mqtt, insert_data_mqtt
-from .dataModel import MachineReading
-
-thai_tz = timezone(timedelta(hours=7))
 
 
 async def read_tags(client: Client, tags):

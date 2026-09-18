@@ -37,20 +37,30 @@ opc_tags = [
 ]
 
 
+import asyncio
+import aiomqtt
+from asyncua import Client
+from datetime import datetime, timezone, timedelta
+
+from .db import connect_db, init_table, insert_data
+from .mqtt import connect_mqtt, insert_data_mqtt
+from .dataModel import MachineReading
+
+thai_tz = timezone(timedelta(hours=7))
+
+
 async def read_tags(client: Client, tags):
     nodes = [client.get_node(f"ns=2;s={name}") for name in tags]
 
-    params = ua.ReadParameters()
-    for node in nodes:
-        rv = ua.ReadValueId()
-        rv.NodeId = node.nodeid
-        rv.AttributeId = ua.AttributeIds.Value
-        params.NodesToRead.append(rv)
-
-    data_values = await client.uaclient.read(params)  # list[ua.DataValue] ลำดับตรงกับ nodes/tags
+    data_values = await asyncio.gather(*(node.read_data_value() for node in nodes))
 
     result = {name: dv.Value.Value for name, dv in zip(tags, data_values)}
-    source_time_thai = data_values[0].SourceTimestamp.replace(tzinfo=timezone.utc).astimezone(thai_tz)
+
+    dv = data_values[0]
+    ts = dv.SourceTimestamp or dv.ServerTimestamp or datetime.now(timezone.utc)
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    source_time_thai = ts.astimezone(thai_tz)
 
     return MachineReading(
         tags=result,

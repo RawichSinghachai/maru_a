@@ -6,7 +6,7 @@ def connect_mqtt(hostname="100.124.242.18", port=1883):
     return aiomqtt.Client(hostname=hostname, port=port)
 
 
-async def insert_data_mqtt(client, data, topic="tmt/banpho/assembly/final3/filling_equipment/BEC/BFC"):
+async def insert_data_mqtt(client, data, topic="tmt/banpho/assembly/final3/filling_equipment/BFC/BFC"):
     try:
         payload = json.dumps(data, default=str)
         await client.publish(topic, payload=payload)

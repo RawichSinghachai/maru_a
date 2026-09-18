@@ -1,8 +1,7 @@
 import asyncio
 import aiomqtt
 from asyncua import Client
-from asyncua import ua 
-from datetime import datetime, timezone, timedelta
+from datetime import timezone, timedelta
 
 from .db import connect_db, init_table, insert_data
 from .mqtt import connect_mqtt, insert_data_mqtt 
@@ -10,7 +9,7 @@ from .dataModel import MachineReading
 
 thai_tz = timezone(timedelta(hours=7))
 opc_tags = [
-    "Coutinue",
+    "Continue",
     "Master_on",
     "Machine_fault",
     "LH_ASN",
@@ -28,8 +27,8 @@ opc_tags = [
     "RH_FillingVolume",
     "RH_PGNum",
     "RH_StepNum",
-    "RH_VacuumGun",
-    "RH_VacuumPump",
+    "RH_VaccumGun",
+    "RH_VaccumPump",
     "RH_PumpVacuumCurrent",
     "PumpDegassingCurrent",
     "PumpSupplyCurrent",
@@ -38,21 +37,15 @@ opc_tags = [
 
 
 async def read_tags(client: Client, tags):
-    nodes = [client.get_node(f"ns=2;s={name}") for name in tags]
-
-    data_values = await asyncio.gather(*(node.read_data_value() for node in nodes))
-
-    result = {name: dv.Value.Value for name, dv in zip(tags, data_values)}
-
-    dv = data_values[0]
-    ts = dv.SourceTimestamp or dv.ServerTimestamp or datetime.now(timezone.utc)
-    if ts.tzinfo is None:
-        ts = ts.replace(tzinfo=timezone.utc)
-    source_time_thai = ts.astimezone(thai_tz)
-
+    result = {}
+    for tag in tags:
+        node = client.get_node(f"ns=2;s={tag}")
+        data_values = await node.read_data_value()
+        result[tag] = data_values.Value.Value
+        result["recorded_at"] = data_values.SourceTimestamp.replace(tzinfo=timezone.utc).astimezone(thai_tz)
+        # Or use SourceTimestamp
     return MachineReading(
         tags=result,
-        recorded_at=source_time_thai,
         l0="tmt", l1="banpho", l2="assembly", l3="final3",
         l4="filling_equipment", l5="BFC", l6="BFC",
     )

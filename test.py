@@ -1,59 +1,46 @@
-from db import connect_db, init_table, insert_data
+"""
+Demo: ทดสอบการเชื่อมต่อฐานข้อมูล PostgreSQL ด้วย asyncpg
+ติดตั้งก่อนใช้งาน: pip install asyncpg
+"""
+
 import asyncio
+import asyncpg
 
-data_mockup = {
-    # L0-L7 (TEXT)
-    "L0": "ON",
-    "L1": "OFF",
-    "L2": "ON",
-    "L3": "OFF",
-    "L4": "ON",
-    "L5": "OFF",
-    "L6": "ON",
-    "L7": "OFF",
 
-    "Coutinue": "True",
-    "Master_on": "True",
-    "Machine_fault": "False",
-
-    # LH (INTEGER)
-    "LH_ASN": 1001,
-    "LH_BN": 25,
-    "LH_FillingPressure": 350,
-    "LH_FillingVolume": 1200,
-    "LH_PGNum": 3,
-    "LH_StepNum": 5,
-    "LH_VacuumGun": 1,
-    "LH_VacuumPump": 1,
-    "LH_PumpVacuumCurrent": 2.45,   # REAL
-
-    # RH (INTEGER)
-    "RH_ASN": 1002,
-    "RH_BN": 26,
-    "RH_FillingPressure": 348,
-    "RH_FillingVolume": 1180,
-    "RH_PGNum": 3,
-    "RH_StepNum": 4,
-    "RH_VacuumGun": 0,
-    "RH_VacuumPump": 1,
-    "RH_PumpVacuumCurrent": 2.38,   # REAL
-
-    # Shared pumps (REAL)
-    "PumpDegassingCurrent": 1.75,
-    "PumpSupplyCurrent": 3.10,
-    "PumpFillingCurrent": 2.90,
+# แก้ไขค่าเชื่อมต่อให้ตรงกับฐานข้อมูลของคุณ
+DB_CONFIG = {
+    "host": "localhost",
+    "port": 5432,
+    "user": "postgres",
+    "password": "your_password",
+    "database": "your_database",
 }
 
-async def main():
-    pool = await connect_db()
-    print("connected")
-    if pool is None:
-        return
-    await init_table(pool)
-    await insert_data(pool, data_mockup)
+
+async def test_connection():
+    """ลองเชื่อมต่อฐานข้อมูล แล้วรายงานผลว่าต่อได้หรือไม่"""
+    conn = None
+    try:
+        conn = await asyncpg.connect(**DB_CONFIG)
+        version = await conn.fetchval("SELECT version();")
+        print("เชื่อมต่อสำเร็จ ✅")
+        print(f"PostgreSQL version: {version}")
+        return True
+
+    except asyncpg.InvalidPasswordError:
+        print("เชื่อมต่อไม่สำเร็จ ❌ — username/password ไม่ถูกต้อง")
+    except asyncpg.InvalidCatalogNameError:
+        print("เชื่อมต่อไม่สำเร็จ ❌ — ไม่พบฐานข้อมูลชื่อนี้")
+    except (ConnectionRefusedError, OSError) as e:
+        print(f"เชื่อมต่อไม่สำเร็จ ❌ — ต่อ host/port ไม่ได้: {e}")
+    except Exception as e:
+        print(f"เชื่อมต่อไม่สำเร็จ ❌ — เกิดข้อผิดพลาด: {type(e).__name__}: {e}")
+    finally:
+        if conn is not None:
+            await conn.close()
+
+    return False
 
 
-
-
-
-asyncio.run(main(),loop_factory=asyncio.SelectorEventLoop)
+if __name__ == "__main__":
+    asyncio.run(test_connection())

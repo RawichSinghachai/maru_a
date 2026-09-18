@@ -29,11 +29,10 @@ async def init_table(pool):
                     L4                      TEXT,
                     L5                      TEXT,
                     L6                      TEXT,
-                    L7                      TEXT,
 
-                    Coutinue                TEXT,
-                    Master_on               TEXT,
-                    Machine_fault           TEXT,
+                    Coutinue                BOOLEAN,
+                    Master_on               BOOLEAN,
+                    Machine_fault           BOOLEAN,
 
                     -- LH
                     LH_ASN                  INTEGER,
@@ -53,7 +52,7 @@ async def init_table(pool):
                     RH_FillingVolume        INTEGER,
                     RH_PGNum                INTEGER,
                     RH_StepNum              INTEGER,
-                    RH_VacuumGun            INTEGER,
+                    RH_VaccumGun            INTEGER,
                     RH_VacuumPump           INTEGER,
                     RH_PumpVacuumCurrent    REAL,
 

@@ -1,7 +1,9 @@
 import asyncio
 import json
-from .db import connect_db, init_table, insert_data
-from .mqtt import connect_mqtt, subscribe
+from datetime import datetime
+from db import connect_db, init_table, insert_data
+from mqtt import connect_mqtt, subscribe
+from dataModel import mqtt_to_postgres
 
 async def main():
     pool = await connect_db()
@@ -16,7 +18,9 @@ async def main():
         async for m in client.messages:
             try:
                 msg = json.loads(m.payload.decode())
-                await insert_data(pool, msg)
+                
+                await insert_data(pool, mqtt_to_postgres(msg))
+                print("insert success")
             except Exception as e:
                 print("insert error:", e)
 

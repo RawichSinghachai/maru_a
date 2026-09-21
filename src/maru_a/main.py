@@ -43,7 +43,8 @@ async def read_tags(client: Client, tags):
         node = client.get_node(f"ns=2;s=BFC.{tag}")
         data_value = await node.read_data_value()
         result[tag] = data_value.Value.Value
-        result["recorded_at"] = data_value.SourceTimestamp.replace(tzinfo=timezone.utc).astimezone(thai_tz)
+        result["recorded_at"] = datetime.now(timezone.utc).astimezone(thai_tz)
+        # result["recorded_at"] = data_value.SourceTimestamp.replace(tzinfo=timezone.utc).astimezone(thai_tz)
 
     return MachineReading(
         tags=result,

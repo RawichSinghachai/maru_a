@@ -1,3 +1,7 @@
+from datetime import datetime, timezone, timedelta
+
+thai_tz = timezone(timedelta(hours=7))
+
 class MachineReading:
     def __init__(self, tags, l0, l1, l2, l3, l4, l5, l6):
         self.tags = tags
@@ -21,3 +25,15 @@ class MachineReading:
             "ASSET_PATH": "/".join(self.l),
             "PAYLOAD": self.tags,
         }
+
+def mqtt_to_postgres(msg):
+    data = dict(msg["PAYLOAD"])
+    data["recorded_at"] = datetime.fromisoformat(msg["EVENT_TS"]).replace(tzinfo=timezone.utc).astimezone(thai_tz)
+    data["L0"] = "COMPANY_CD"
+    data["L1"] = "PLANT_CD"
+    data["L2"] = "SHOP_CD"
+    data["L3"] = "LINE_ID"
+    data["L4"] = "STATION_CD"
+    data["L5"] = "FUNCTION_CD"
+    data["L6"] = "CE_CD"
+    return data

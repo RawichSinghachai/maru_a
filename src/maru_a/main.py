@@ -39,13 +39,22 @@ opc_tags = [
 
 async def read_tags(client: Client, tags):
     result = {}
-    for tag in opc_tags:
-        node = client.get_node(f"ns=2;s=BFC.{tag}")
-        data_value = await node.read_data_value()
-        result[tag] = data_value.Value.Value
-        result["recorded_at"] = datetime.now(timezone.utc).astimezone(thai_tz)
-        # result["recorded_at"] = data_value.SourceTimestamp.replace(tzinfo=timezone.utc).astimezone(thai_tz)
-
+    
+    for tag in tags:
+        try:
+            node = client.get_node(f"ns=2;s=BFC.{tag}")
+            data_value = await node.read_data_value()
+            result[tag] = data_value.Value.Value
+        except Exception as e:
+            # Warn which tag has an issue and set value to None
+            print(f"⚠️ Failed to read tag '{tag}': {e}")
+            result[tag] = None
+            
+    # Record the overall timestamp for this reading cycle
+    result["recorded_at"] = datetime.now(timezone.utc).astimezone(thai_tz)
+    # Datetime from PLC
+    # result["recorded_at"] = data_value.SourceTimestamp.replace(tzinfo=timezone.utc).astimezone(thai_tz)
+   
     return MachineReading(
         tags=result,
         l0="tmt", l1="banpho", l2="assembly", l3="final3",

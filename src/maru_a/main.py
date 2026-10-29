@@ -5,8 +5,9 @@ from asyncua import Client
 from datetime import datetime, timezone, timedelta
 
 from db import connect_db, init_table, insert_data
-from mqtt import connect_mqtt, insert_data_mqtt 
+from mqtt import connect_mqtt, publish_cycle
 from dataModel import MachineReading
+from cycle import CycleBuffer
 
 thai_tz = timezone(timedelta(hours=7))
 opc_tags = [
@@ -39,22 +40,18 @@ opc_tags = [
 
 async def read_tags(client: Client, tags):
     result = {}
-    
+
     for tag in tags:
         try:
             node = client.get_node(f"ns=2;s=BFC.{tag}")
             data_value = await node.read_data_value()
             result[tag] = data_value.Value.Value
         except Exception as e:
-            # Warn which tag has an issue and set value to None
             print(f"⚠️ Failed to read tag '{tag}': {e}")
             result[tag] = None
-            
-    # Record the overall timestamp for this reading cycle
+
     result["recorded_at"] = datetime.now(timezone.utc).astimezone(thai_tz)
-    # Datetime from PLC
-    # result["recorded_at"] = data_value.SourceTimestamp.replace(tzinfo=timezone.utc).astimezone(thai_tz)
-   
+
     return MachineReading(
         tags=result,
         l0="tmt", l1="banpho", l2="assembly", l3="final3",
@@ -68,6 +65,9 @@ async def main():
         return
     await init_table(pool)
 
+    # buffer ประกอบคัน แยกซ้าย/ขวา
+    buffers = {"LH": CycleBuffer("LH"), "RH": CycleBuffer("RH")}
+
     while True:
         try:
             async with Client(url="opc.tcp://100.117.187.28:52250") as client:
@@ -77,27 +77,29 @@ async def main():
                     while True:
                         data = await read_tags(client, opc_tags)
 
-                        db_result, mqtt_result = await asyncio.gather(
-                            insert_data(pool, data.to_postgres()),
-                            insert_data_mqtt(mqtt_client, data.to_mqtt()),
-                            return_exceptions=True
-                        )
-                        if isinstance(mqtt_result, Exception):
-                            raise mqtt_result
-                        if isinstance(db_result, Exception):
-                            print(f"db error: {db_result}")
+                        # 1) เก็บ raw ลง DB ทุกวินาที (เหมือนเดิม — safety net ย้อนดูได้)
+                        try:
+                            await insert_data(pool, data.to_postgres())
+                        except Exception as e:
+                            print(f"db error: {e}")
 
-                        print("sent")
+                        # 2) ป้อนเข้า buffer ; คันไหนเติมจบ ส่งทั้งคันไปเครื่อง 2 ทันที
+                        for side, buf in buffers.items():
+                            cycle = buf.update(data.tags)
+                            if cycle is not None:
+                                await publish_cycle(mqtt_client, side, cycle)
+
                         await asyncio.sleep(1)
 
-        except (ConnectionError, OSError, Exception) as e:
-            print(f"OPC UA connection error: {e}, reconnecting in 5s...")
-            await asyncio.sleep(5)
         except aiomqtt.MqttError as e:
             print(f"MQTT disconnected: {e}, reconnecting in 5s")
             await asyncio.sleep(5)
+        except (ConnectionError, OSError, Exception) as e:
+            print(f"OPC UA connection error: {e}, reconnecting in 5s...")
+            await asyncio.sleep(5)
 
     await pool.close()
+
 
 if __name__ == "__main__":
     asyncio.run(main(), loop_factory=asyncio.SelectorEventLoop)

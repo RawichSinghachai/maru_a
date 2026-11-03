@@ -17,6 +17,7 @@ async def connect_db():
 async def init_table(pool):
     try:
         async with pool.acquire() as conn:
+            # ---- ตารางข้อมูลดิบรายวินาที ----
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS Machine (
                     Id                      BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -65,6 +66,26 @@ async def init_table(pool):
                     Recorded_at             TIMESTAMPTZ NOT NULL DEFAULT now()
                 )
             """)
+
+            # ---- ตารางเก็บผล predict (features / input / recon เป็น JSONB) ----
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS prediction_break_oil_filling_machine(
+                    Id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+                    side            TEXT        NOT NULL,          -- 'LH' / 'RH'
+                    pgnum           INTEGER     NOT NULL,
+                    bn              INTEGER,                        -- วนซ้ำได้ -> ไม่ใช้เป็น key
+                    asn             INTEGER,
+                    predicted_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+                    length          INTEGER,                        -- จำนวนวินาทีของคัน
+                    overall_pass    BOOLEAN,
+
+                    features        JSONB,                          -- สรุปต่อ feature ทั้งก้อน
+                    input           JSONB,                          -- time-series ค่าจริง
+                    recon           JSONB                           -- time-series ที่โมเดลสร้างคืน
+                )
+            """)
     except Exception as e:
         print(f"init_table error: {e}")
 
@@ -76,7 +97,7 @@ async def insert_data(pool, data, table="Machine"):
 
         col_str = ", ".join(columns)
         placeholders = ", ".join(f"${i+1}" for i in range(len(values)))
-        
+
 
         query = f"INSERT INTO {table} ({col_str}) VALUES ({placeholders})"
 

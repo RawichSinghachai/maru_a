@@ -12,15 +12,15 @@ def connect_mqtt(hostname="100.124.242.18", port=1883):
 
 
 def build_cycle_topic(side, pgnum):
-    """สร้าง topic ต่อ side + pgnum เช่น .../raw_data/lh/20
-    side ใช้ตัวพิมพ์เล็กใน topic (LH -> lh), pgnum แปลงเป็น int กัน 20.0
+    """สร้าง topic ต่อ side + pgnum เช่น .../raw_data/LH/20
+    side ใช้ตัวพิมพ์ใหญ่ใน topic (LH / RH), pgnum แปลงเป็น int กัน 20.0
     คืน None ถ้า pgnum ใช้ไม่ได้ (None / ไม่ใช่ตัวเลข)
     """
     try:
         pg = int(pgnum)
     except (TypeError, ValueError):
         return None
-    return CYCLE_TOPIC_TEMPLATE.format(side=str(side).lower(), pgnum=pg)
+    return CYCLE_TOPIC_TEMPLATE.format(side=str(side).upper(), pgnum=pg)
 
 
 async def publish_cycle(client, side, rows):
